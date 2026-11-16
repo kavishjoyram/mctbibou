@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hi gorgeous — mct bibou</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-alabaster: #FAF8F5;
+            --ink-charcoal: #1C1B19;
+            --muted-stone: #8C8881;
+            --border-sand: #E8E4DD;
+            --card-surface: #FFFFFF;
+            --wate-fill: #DCE6EC;
+            --wate-accent: #6A8D9B;
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-alabaster);
+            color: var(--ink-charcoal);
+            overflow-x: hidden;
+        }
+
+        .serif {
+            font-family: 'Instrument Serif', Georgia, serif;
+        }
+
+        /* Subtle card elevation */
+        .stationery-card {
+            background-color: var(--card-surface);
+            border: 1px solid var(--border-sand);
+            box-shadow: 0 10px 30px -15px rgba(28, 27, 25, 0.04), 0 2px 6px -1px rgba(28, 27, 25, 0.02);
+        }
+
+        /* Note text transition */
+        .note-transition {
+            transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .note-exit {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+
+        .note-enter {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Wate vessel wave and fill transition */
+        .wate-level {
+            transition: height 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* Tactile button press */
+        .btn-tactile {
+            transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+        }
+        .btn-tactile:active {
+            transform: scale(0.97);
+        }
+
+        /* Gentle pulse for active reminder */
+        @keyframes softPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.45; transform: scale(0.92); }
+        }
+        .pulse-dot {
+            animation: softPulse 2.8s infinite ease-in-out;
+        }
+
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+    </style>
+</head>
+<body class="min-h-full flex flex-col justify-between antialiased selection:bg-[#E8E4DD] selection:text-[#1C1B19]">
+
+    <!-- Subtle In-App Toast for Wate Reminder -->
+    <div id="wate-toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 -translate-y-3 transition-all duration-300">
+        <div class="stationery-card px-4 py-2.5 rounded-full flex items-center gap-2.5 shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-[#6A8D9B]"></span>
+            <span id="wate-toast-text" class="text-xs font-normal tracking-wide text-[#1C1B19]">pause the POs — take a sip of wate</span>
+        </div>
+    </div>
+
+    <!-- Top Header & Navigation -->
+    <header class="w-full max-w-md mx-auto px-6 pt-10 pb-4 flex items-end justify-between">
+        <div>
+            <h1 class="serif text-3xl sm:text-4xl font-normal tracking-tight leading-none text-[#1C1B19]">hi gorgeous</h1>
+            <p class="text-[11px] text-[#8C8881] mt-1.5 tracking-[0.18em] lowercase font-normal">mct bibou</p>
+        </div>
+
+        <!-- Two-Tab Pill Switcher -->
+        <nav aria-label="Main navigation" class="flex items-center p-1 rounded-full bg-[#EFECE6] border border-[#E8E4DD]">
+            <button 
+                onclick="switchTab('notes')" 
+                id="tab-btn-notes" 
+                class="px-4 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 bg-white text-[#1C1B19] font-medium shadow-sm">
+                notes
+            </button>
+            <button 
+                onclick="switchTab('wate')" 
+                id="tab-btn-wate" 
+                class="px-4 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 text-[#8C8881] hover:text-[#1C1B19] font-normal flex items-center gap-1.5">
+                <span>wate</span>
+                <span id="nav-wate-dot" class="hidden w-1.5 h-1.5 rounded-full bg-[#6A8D9B]"></span>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 w-full max-w-md mx-auto px-6 py-6 flex flex-col justify-center">
+
+        <!-- ======================= TAB 1: NOTES ======================= -->
+        <section id="panel-notes" class="space-y-5">
+            
+            <!-- Filter Pill Bar (All vs Favorites) -->
+            <div class="flex items-center justify-between px-1">
+                <div class="flex items-center gap-2">
+                    <button onclick="setNoteFilter('all')" id="filter-all" class="text-[11px] tracking-widest uppercase font-medium text-[#1C1B19] transition-colors">
+                        all notes
+                    </button>
+                    <span class="text-[#D5D0C8] text-xs">/</span>
+                    <button onclick="setNoteFilter('fav')" id="filter-fav" class="text-[11px] tracking-widest uppercase font-normal text-[#8C8881] hover:text-[#1C1B19] transition-colors flex items-center gap-1">
+                        <span>saved</span>
+                        <span id="fav-count-badge" class="text-[10px] text-[#8C8881]">(0)</span>
+                    </button>
+                </div>
+
+                <span id="note-counter" class="text-[11px] font-mono tracking-widest text-[#8C8881]">01 / 12</span>
+            </div>
+
+            <!-- Editorial Stationery Card -->
+            <div 
+                onclick="handleCardTap(event)"
+                class="stationery-card rounded-3xl p-8 sm:p-10 min-h-[290px] flex flex-col justify-between cursor-pointer select-none relative group transition-colors hover:border-[#DCD6CC]">
+                
+                <!-- Top Card Row: Category Tag + Favorite Heart -->
+                <div class="flex items-center justify-between">
+                    <span id="note-tag" class="text-[10px] tracking-[0.16em] uppercase text-[#8C8881] px-2.5 py-1 rounded-full bg-[#FAF8F5] border border-[#E8E4DD]">
+                        requisition
+                    </span>
+
+                    <button 
+                        onclick="toggleFavorite(event)" 
+                        id="fav-btn"
+                        aria-label="Save note"
+                        class="btn-tactile w-8 h-8 rounded-full flex items-center justify-center text-[#8C8881] hover:text-[#1C1B19] hover:bg-[#FAF8F5]">
+                        <svg id="fav-icon" class="w-4 h-4 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Center Quote Area -->
+                <div class="my-auto py-8">
+                    <p id="note-body" class="serif text-2xl sm:text-[28px] leading-[1.35] text-[#1C1B19] font-normal tracking-normal note-transition note-enter">
+                        Out of every PO you've ever raised, you're still the best thing ever acquired.
+                    </p>
+                </div>
+
+                <!-- Bottom Card Micro-footer -->
+                <div class="flex items-center justify-between pt-2 border-t border-[#F2EFE9]">
+                    <span class="text-[11px] text-[#8C8881] tracking-wide">for my favorite purchasing officer</span>
+                    <button 
+                        onclick="deleteCurrentCustomNote(event)" 
+                        id="delete-note-btn" 
+                        class="hidden text-[10px] tracking-wider uppercase text-[#B57B6E] hover:underline">
+                        remove
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tactile Controls Row -->
+            <div class="flex items-center justify-between gap-3 pt-1">
+                <button 
+                    onclick="prevNote()" 
+                    aria-label="Previous note"
+                    class="btn-tactile stationery-card w-11 h-11 rounded-full flex items-center justify-center text-[#1C1B19] hover:border-[#CFC9BE]">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m15 18-6-6 6-6"/>
+                    </svg>
+                </button>
+
+                <button 
+                    onclick="nextNote()" 
+                    class="btn-tactile flex-1 py-3 px-6 rounded-full bg-[#1C1B19] text-[#FAF8F5] text-xs tracking-[0.14em] lowercase font-medium hover:bg-[#2F2D2A] shadow-sm">
+                    next note
+                </button>
+
+                <button 
+                    onclick="shuffleNote()" 
+                    aria-label="Shuffle note"
+                    title="Shuffle"
+                    class="btn-tactile stationery-card w-11 h-11 rounded-full flex items-center justify-center text-[#8C8881] hover:text-[#1C1B19] hover:border-[#CFC9BE]">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Unobtrusive "+ leave a note" trigger -->
+            <div class="pt-3 text-center">
+                <button 
+                    onclick="openNoteDrawer()" 
+                    class="text-xs text-[#8C8881] hover:text-[#1C1B19] tracking-wide transition-colors py-1 px-3 rounded-full">
+                    + leave a note
+                </button>
+            </div>
+        </section>
+
+        <!-- ======================= TAB 2: WATE ======================= -->
+        <section id="panel-wate" class="hidden space-y-5">
+            
+            <!-- Top Header Row for Wate -->
+            <div class="flex items-center justify-between px-1">
+                <span class="text-[11px] tracking-widest uppercase text-[#8C8881]">daily wate log</span>
+                <span id="wate-fraction" class="text-[11px] font-mono tracking-widest text-[#1C1B19]">0 / 8 sips</span>
+            </div>
+
+            <!-- Main Wate Card -->
+            <div class="stationery-card rounded-3xl p-8 sm:p-9 flex flex-col items-center text-center space-y-7">
+                
+                <!-- Interactive Glass Vessel + Droplet Grid -->
+                <div class="w-full flex flex-col items-center">
+                    
+                    <!-- Minimalist Glass Vessel -->
+                    <div 
+                        onclick="drinkWate()" 
+                        title="Tap to drink wate"
+                        class="relative w-24 h-32 rounded-b-3xl rounded-t-lg border-[1.5px] border-[#1C1B19]/25 bg-[#FAF8F5] overflow-hidden cursor-pointer flex items-center justify-center group shadow-inner">
+                        
+                        <!-- Rising Wate Fill -->
+                        <div 
+                            id="wate-vessel-fill" 
+                            style="height: 0%;" 
+                            class="wate-level absolute bottom-0 left-0 right-0 bg-[#DCE6EC]/90 border-t border-[#6A8D9B]/30">
+                        </div>
+
+                        <!-- Center Number Inside Vessel -->
+                        <div class="relative z-10 flex flex-col items-center">
+                            <span id="wate-big-number" class="serif text-4xl text-[#1C1B19] leading-none">0</span>
+                            <span class="text-[9px] tracking-[0.2em] uppercase text-[#8C8881] mt-1">wate</span>
+                        </div>
+                    </div>
+
+                    <!-- 8-Droplet Tactile Grid -->
+                    <div id="wate-grid" class="grid grid-cols-8 gap-2 mt-6 w-full max-w-[260px]">
+                        <!-- Populated dynamically by JS -->
+                    </div>
+                </div>
+
+                <!-- Status Prompt -->
+                <div class="space-y-1 max-w-xs min-h-[44px] flex flex-col justify-center">
+                    <p id="wate-status-text" class="serif text-2xl text-[#1C1B19] font-normal tracking-normal">
+                        time to drink some wate, gorgeous.
+                    </p>
+                </div>
+
+                <!-- Primary Action & Subtle Reset -->
+                <div class="w-full space-y-3 pt-1">
+                    <button 
+                        onclick="drinkWate()" 
+                        class="btn-tactile w-full py-3.5 px-6 rounded-full bg-[#1C1B19] text-[#FAF8F5] text-xs tracking-[0.14em] lowercase font-medium hover:bg-[#2F2D2A] shadow-sm">
+                        + drink wate
+                    </button>
+
+                    <div class="flex items-center justify-between px-2 pt-1">
+                        <button 
+                            onclick="undoWate()" 
+                            class="text-[11px] text-[#8C8881] hover:text-[#1C1B19] transition-colors">
+                            -1 sip
+                        </button>
+                        <button 
+                            onclick="resetWate()" 
+                            class="text-[11px] text-[#8C8881] hover:text-[#1C1B19] transition-colors">
+                            reset today
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gentle 45-min Wate Reminder Toggle Card -->
+            <div class="stationery-card rounded-2xl px-5 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span id="reminder-indicator" class="w-2 h-2 rounded-full bg-[#D5D0C8]"></span>
+                    <div class="text-left">
+                        <p class="text-xs font-medium text-[#1C1B19]">wate reminder</p>
+                        <p id="reminder-subtext" class="text-[11px] text-[#8C8881]">gentle nudge every 45m while doing POs</p>
+                    </div>
+                </div>
+
+                <button 
+                    onclick="toggleReminder()" 
+                    id="reminder-toggle-btn"
+                    role="switch"
+                    aria-checked="false"
+                    class="w-11 h-6 rounded-full bg-[#E8E4DD] p-0.5 transition-colors duration-200 relative flex items-center">
+                    <span id="reminder-knob" class="w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform duration-200 translate-x-0"></span>
+                </button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Minimalist Footer -->
+    <footer class="w-full max-w-md mx-auto px-6 py-6 text-center">
+        <p class="text-[11px] text-[#8C8881]/70 tracking-[0.15em] lowercase">mct bibou</p>
+    </footer>
+
+    <!-- ======================= MODAL DRAWER: LEAVE A NOTE ======================= -->
+    <div id="note-drawer-backdrop" class="fixed inset-0 bg-[#1C1B19]/20 backdrop-blur-[2px] z-40 hidden opacity-0 transition-opacity duration-200 flex items-end sm:items-center justify-center p-4">
+        <div id="note-drawer-panel" class="stationery-card w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-5 transform translate-y-4 transition-transform duration-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="serif text-2xl text-[#1C1B19] font-normal">leave a note</h3>
+                    <p class="text-[11px] text-[#8C8881]">saved privately in this browser</p>
+                </div>
+                <button onclick="closeNoteDrawer()" class="w-8 h-8 rounded-full flex items-center justify-center text-[#8C8881] hover:text-[#1C1B19] hover:bg-[#FAF8F5]">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                        <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <label for="custom-note-input" class="block text-[11px] uppercase tracking-widest text-[#8C8881]">message</label>
+                <textarea 
+                    id="custom-note-input" 
+                    rows="3" 
+                    maxlength="180"
+                    placeholder="Write something sweet for her workday..."
+                    class="w-full rounded-2xl bg-[#FAF8F5] border border-[#E8E4DD] p-4 text-sm text-[#1C1B19] placeholder-[#8C8881]/60 focus:outline-none focus:border-[#1C1B19] resize-none"></textarea>
+
+                <div class="flex items-center justify-between pt-1">
+                    <label for="custom-tag-input" class="text-[11px] uppercase tracking-widest text-[#8C8881]">tag</label>
+                    <input 
+                        id="custom-tag-input" 
+                        type="text" 
+                        maxlength="18"
+                        placeholder="mct bibou" 
+                        class="w-36 rounded-full bg-[#FAF8F5] border border-[#E8E4DD] px-3 py-1 text-xs text-right text-[#1C1B19] placeholder-[#8C8881]/60 focus:outline-none focus:border-[#1C1B19]">
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2">
+                <button 
+                    onclick="closeNoteDrawer()" 
+                    class="btn-tactile flex-1 py-3 rounded-full border border-[#E8E4DD] text-xs tracking-wider lowercase text-[#8C8881] hover:text-[#1C1B19]">
+                    cancel
+                </button>
+                <button 
+                    onclick="saveCustomNote()" 
+                    class="btn-tactile flex-1 py-3 rounded-full bg-[#1C1B19] text-[#FAF8F5] text-xs tracking-wider lowercase font-medium hover:bg-[#2F2D2A]">
+                    save note
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================= APPLICATION LOGIC ======================= -->
+    <script>
+        // --- Default Curated Notes (Sweet + Purchasing Officer / PO nods) ---
+        const DEFAULT_NOTES = [
+            {
+                id: 'n1',
+                tag: 'acquisition',
+                text: "Out of every PO you've ever raised, you're still the best thing ever acquired."
+            },
+            {
+                id: 'n2',
+                tag: 'pause',
+                text: "Take a breath. The suppliers can wait five minutes."
+            },
+            {
+                id: 'n3',
+                tag: 'procurement',
+                text: "Best purchasing officer in the game. Zero competition."
+            },
+            {
+                id: 'n4',
+                tag: 'rest',
+                text: "Close the spreadsheets for a second and rest your eyes."
+            },
+            {
+                id: 'n5',
+                tag: 'requisition',
+                text: "Consider this an official requisition for one big hug later."
+            },
+            {
+                id: 'n6',
+                tag: 'sole source',
+                text: "No vendor could ever deliver what you bring to my life."
+            },
+            {
+                id: 'n7',
+                tag: 'after hours',
+                text: "You handle a hundred requests a day—let me take care of you tonight."
+            },
+            {
+                id: 'n8',
+                tag: 'priority',
+                text: "Zero lead time on how much I love you."
+            },
+            {
+                id: 'n9',
+                tag: 'steady',
+                text: "Even on the messy PO days, you're doing amazing."
+            },
+            {
+                id: 'n10',
+                tag: 'always',
+                text: "mct bibou — proud of you always."
+            },
+            {
+                id: 'n11',
+                tag: 'hydration',
+                text: "Quick audit: have you had a sip of wate recently?"
+            },
+            {
+                id: 'n12',
+                tag: 'approved',
+                text: "Every single thing about you is 100% pre-approved in my book."
+            }
+        ];
+
+        // --- State Keys in localStorage ---
+        const STORAGE_KEYS = {
+            CUSTOM_NOTES: 'mct_bibou_custom_notes_v1',
+            FAV_IDS: 'mct_bibou_fav_ids_v1',
+            WATE_DATA: 'mct_bibou_wate_data_v1',
+            REMINDER_ON: 'mct_bibou_wate_reminder_v1'
+        };
+
+        // --- Runtime State ---
+        let customNotes = [];
+        let favoriteIds = [];
+        let currentFilter = 'all'; // 'all' | 'fav'
+        let currentIndex = 0;
+
+        const WATE_GOAL = 8;
+        let wateCount = 0;
+        let reminderActive = false;
+        let reminderIntervalId = null;
+        let reminderMinutesLeft = 45;
+
+        // --- Initialization ---
+        function initApp() {
+            loadPersistedState();
+            renderNote(false);
+            updateFavBadge();
+            renderWateUI();
+            syncReminderUI();
+        }
+
+        function getTodayKey() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
+
+        function loadPersistedState() {
+            try {
+                const savedCustom = localStorage.getItem(STORAGE_KEYS.CUSTOM_NOTES);
+                if (savedCustom) customNotes = JSON.parse(savedCustom);
+
+                const savedFavs = localStorage.getItem(STORAGE_KEYS.FAV_IDS);
+                if (savedFavs) favoriteIds = JSON.parse(savedFavs);
+
+                const savedWate = localStorage.getItem(STORAGE_KEYS.WATE_DATA);
+                if (savedWate) {
+                    const parsed = JSON.parse(savedWate);
+                    // Reset count automatically on a new calendar day
+                    if (parsed.date === getTodayKey()) {
+                        wateCount = Number(parsed.count) || 0;
+                    } else {
+                        wateCount = 0;
+                        saveWateState();
+                    }
+                }
+
+                const savedReminder = localStorage.getItem(STORAGE_KEYS.REMINDER_ON);
+                if (savedReminder === 'true') {
+                    reminderActive = true;
+                    startReminderTimer();
+                }
+            } catch (e) {
+                console.warn('Storage access limited:', e);
+            }
+        }
+
+        function saveWateState() {
+            try {
+                localStorage.setItem(STORAGE_KEYS.WATE_DATA, JSON.stringify({
+                    date: getTodayKey(),
+                    count: wateCount
+                }));
+            } catch (e) {}
+        }
+
+        // --- Tab Navigation ---
+        function switchTab(tab) {
+            const notesPanel = document.getElementById('panel-notes');
+            const watePanel = document.getElementById('panel-wate');
+            const btnNotes = document.getElementById('tab-btn-notes');
+            const btnWate = document.getElementById('tab-btn-wate');
+
+            if (tab === 'notes') {
+                notesPanel.classList.remove('hidden');
+                watePanel.classList.add('hidden');
+
+                btnNotes.className = "px-4 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 bg-white text-[#1C1B19] font-medium shadow-sm";
+                btnWate.className = "px-4 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 text-[#8C8881] hover:text-[#1C1B19] font-normal flex items-center gap-1.5";
+            } else {
+                notesPanel.classList.add('hidden');
+                watePanel.classList.remove('hidden');
+
+                btnWate.className = "px-4 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 bg-white text-[#1C1B19] font-medium shadow-sm flex items-center gap-1.5";
+                btnNotes.className = "px-4 py-1.5 rounded-full text-xs tracking-wide transition-all duration-200 text-[#8C8881] hover:text-[#1C1B19] font-normal";
+            }
+        }
+
+        // --- Notes Deck Logic ---
+        function getAllNotes() {
+            return [...DEFAULT_NOTES, ...customNotes];
+        }
+
+        function getActiveDeck() {
+            const all = getAllNotes();
+            if (currentFilter === 'fav') {
+                const favDeck = all.filter(n => favoriteIds.includes(n.id));
+                return favDeck.length > 0 ? favDeck : all;
+            }
+            return all;
+        }
+
+        function setNoteFilter(filter) {
+            if (filter === 'fav' && favoriteIds.length === 0) {
+                showToast('tap the heart on any note to save it first');
+                return;
+            }
+            currentFilter = filter;
+            currentIndex = 0;
+
+            const btnAll = document.getElementById('filter-all');
+            const btnFav = document.getElementById('filter-fav');
+
+            if (currentFilter === 'all') {
+                btnAll.className = "text-[11px] tracking-widest uppercase font-medium text-[#1C1B19] transition-colors";
+                btnFav.className = "text-[11px] tracking-widest uppercase font-normal text-[#8C8881] hover:text-[#1C1B19] transition-colors flex items-center gap-1";
+            } else {
+                btnFav.className = "text-[11px] tracking-widest uppercase font-medium text-[#1C1B19] transition-colors flex items-center gap-1";
+                btnAll.className = "text-[11px] tracking-widest uppercase font-normal text-[#8C8881] hover:text-[#1C1B19] transition-colors";
+            }
+
+            renderNote(true);
+        }
+
+        function renderNote(animate = true) {
+            const deck = getActiveDeck();
+            if (currentIndex >= deck.length) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = deck.length - 1;
+
+            const item = deck[currentIndex];
+            const bodyEl = document.getElementById('note-body');
+            const tagEl = document.getElementById('note-tag');
+            const counterEl = document.getElementById('note-counter');
+            const favIcon = document.getElementById('fav-icon');
+            const deleteBtn = document.getElementById('delete-note-btn');
+
+            const applyContent = () => {
+                bodyEl.textContent = item.text;
+                tagEl.textContent = item.tag || 'note';
+                counterEl.textContent = `${String(currentIndex + 1).padStart(2, '0')} / ${String(deck.length).padStart(2, '0')}`;
+
+                const isFav = favoriteIds.includes(item.id);
+                if (isFav) {
+                    favIcon.setAttribute('fill', '#1C1B19');
+                    favIcon.setAttribute('stroke', '#1C1B19');
+                } else {
+                    favIcon.setAttribute('fill', 'none');
+                    favIcon.setAttribute('stroke', 'currentColor');
+                }
+
+                if (item.custom) {
+                    deleteBtn.classList.remove('hidden');
+                } else {
+                    deleteBtn.classList.add('hidden');
+                }
+            };
+
+            if (animate) {
+                bodyEl.classList.remove('note-enter');
+                bodyEl.classList.add('note-exit');
+                setTimeout(() => {
+                    applyContent();
+                    bodyEl.classList.remove('note-exit');
+                    bodyEl.classList.add('note-enter');
+                }, 170);
+            } else {
+                applyContent();
+            }
+        }
+
+        function nextNote() {
+            const deck = getActiveDeck();
+            currentIndex = (currentIndex + 1) % deck.length;
+            renderNote(true);
+        }
+
+        function prevNote() {
+            const deck = getActiveDeck();
+            currentIndex = (currentIndex - 1 + deck.length) % deck.length;
+            renderNote(true);
+        }
+
+        function shuffleNote() {
+            const deck = getActiveDeck();
+            if (deck.length <= 1) return;
+            let nextIdx = currentIndex;
+            while (nextIdx === currentIndex) {
+                nextIdx = Math.floor(Math.random() * deck.length);
+            }
+            currentIndex = nextIdx;
+            renderNote(true);
+        }
+
+        function handleCardTap(event) {
+            // Do not advance if clicking favorite or delete buttons
+            if (event.target.closest('#fav-btn') || event.target.closest('#delete-note-btn')) return;
+            nextNote();
+        }
+
+        function toggleFavorite(event) {
+            event.stopPropagation();
+            const deck = getActiveDeck();
+            const item = deck[currentIndex];
+            if (!item) return;
+
+            const idx = favoriteIds.indexOf(item.id);
+            if (idx > -1) {
+                favoriteIds.splice(idx, 1);
+            } else {
+                favoriteIds.push(item.id);
+            }
+
+            try {
+                localStorage.setItem(STORAGE_KEYS.FAV_IDS, JSON.stringify(favoriteIds));
+            } catch (e) {}
+
+            // If viewing favorites and last favorite was removed, switch back to all
+            if (currentFilter === 'fav' && favoriteIds.length === 0) {
+                currentFilter = 'all';
+                document.getElementById('filter-all').className = "text-[11px] tracking-widest uppercase font-medium text-[#1C1B19] transition-colors";
+                document.getElementById('filter-fav').className = "text-[11px] tracking-widest uppercase font-normal text-[#8C8881] hover:text-[#1C1B19] transition-colors flex items-center gap-1";
+            }
+
+            updateFavBadge();
+            renderNote(false);
+        }
+
+        function updateFavBadge() {
+            const badge = document.getElementById('fav-count-badge');
+            badge.textContent = `(${favoriteIds.length})`;
+        }
+
+        // --- Custom Note Modal Drawer ---
+        function openNoteDrawer() {
+            const backdrop = document.getElementById('note-drawer-backdrop');
+            const panel = document.getElementById('note-drawer-panel');
+            backdrop.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                backdrop.classList.remove('opacity-0');
+                panel.classList.remove('translate-y-4');
+            });
+            setTimeout(() => {
+                document.getElementById('custom-note-input').focus();
+            }, 150);
+        }
+
+        function closeNoteDrawer() {
+            const backdrop = document.getElementById('note-drawer-backdrop');
+            const panel = document.getElementById('note-drawer-panel');
+            backdrop.classList.add('opacity-0');
+            panel.classList.add('translate-y-4');
+            setTimeout(() => {
+                backdrop.classList.add('hidden');
+            }, 200);
+        }
+
+        function saveCustomNote() {
+            const textInput = document.getElementById('custom-note-input');
+            const tagInput = document.getElementById('custom-tag-input');
+            const text = textInput.value.trim();
+            const tag = tagInput.value.trim().toLowerCase() || 'mct bibou';
+
+            if (!text) {
+                showToast('write a quick note first');
+                return;
+            }
+
+            const newNote = {
+                id: 'custom_' + Date.now(),
+                tag: tag,
+                text: text,
+                custom: true
+            };
+
+            customNotes.push(newNote);
+            try {
+                localStorage.setItem(STORAGE_KEYS.CUSTOM_NOTES, JSON.stringify(customNotes));
+            } catch (e) {}
+
+            textInput.value = '';
+            tagInput.value = '';
+            closeNoteDrawer();
+
+            // Jump directly to the newly added note
+            currentFilter = 'all';
+            const deck = getActiveDeck();
+            currentIndex = deck.length - 1;
+            renderNote(true);
+            showToast('note added to her deck');
+        }
+
+        function deleteCurrentCustomNote(event) {
+            event.stopPropagation();
+            const deck = getActiveDeck();
+            const item = deck[currentIndex];
+            if (!item || !item.custom) return;
+
+            customNotes = customNotes.filter(n => n.id !== item.id);
+            favoriteIds = favoriteIds.filter(id => id !== item.id);
+
+            try {
+                localStorage.setItem(STORAGE_KEYS.CUSTOM_NOTES, JSON.stringify(customNotes));
+                localStorage.setItem(STORAGE_KEYS.FAV_IDS, JSON.stringify(favoriteIds));
+            } catch (e) {}
+
+            currentIndex = Math.max(0, currentIndex - 1);
+            updateFavBadge();
+            renderNote(true);
+            showToast('custom note removed');
+        }
+
+        // --- Wate Tracker Logic (Always spelled "wate") ---
+        function getWateStatusPrompt(count) {
+            if (count <= 0) {
+                return "time to drink some wate, gorgeous.";
+            } else if (count >= 1 && count <= 3) {
+                return "good start. keep sipping your wate.";
+            } else if (count >= 4 && count <= 7) {
+                return "hydrated purchasing officer energy. more wate.";
+            } else {
+                return "daily wate goal complete. mct bibou.";
+            }
+        }
+
+        function renderWateUI() {
+            const pct = Math.min(100, Math.round((wateCount / WATE_GOAL) * 100));
+            document.getElementById('wate-vessel-fill').style.height = `${pct}%`;
+            document.getElementById('wate-big-number').textContent = wateCount;
+            document.getElementById('wate-fraction').textContent = `${wateCount} / ${WATE_GOAL} sips`;
+            document.getElementById('wate-status-text').textContent = getWateStatusPrompt(wateCount);
+
+            // Render 8 minimalist droplets
+            const grid = document.getElementById('wate-grid');
+            grid.innerHTML = '';
+
+            for (let i = 1; i <= WATE_GOAL; i++) {
+                const filled = i <= wateCount;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.setAttribute('aria-label', `Set wate to ${i}`);
+                btn.onclick = () => setExactWate(i);
+                btn.className = `h-8 rounded-full border transition-all duration-300 flex items-center justify-center ${
+                    filled 
+                        ? 'bg-[#DCE6EC] border-[#6A8D9B]/50 text-[#1C1B19]' 
+                        : 'bg-[#FAF8F5] border-[#E8E4DD] text-[#8C8881]/40 hover:border-[#CFC9BE]'
+                }`;
+                btn.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${filled ? 'bg-[#6A8D9B]' : 'bg-[#D5D0C8]'}"></span>`;
+                grid.appendChild(btn);
+            }
+        }
+
+        function drinkWate() {
+            if (wateCount < WATE_GOAL) {
+                wateCount++;
+            } else {
+                // Allow bonus sips beyond 8 if she's extra hydrated
+                wateCount++;
+            }
+            saveWateState();
+            renderWateUI();
+
+            if (wateCount === WATE_GOAL) {
+                showToast('8/8 wate complete — mct bibou');
+            }
+        }
+
+        function undoWate() {
+            if (wateCount > 0) {
+                wateCount--;
+                saveWateState();
+                renderWateUI();
+            }
+        }
+
+        function setExactWate(amount) {
+            if (wateCount === amount) {
+                wateCount = amount - 1;
+            } else {
+                wateCount = amount;
+            }
+            saveWateState();
+            renderWateUI();
+        }
+
+        function resetWate() {
+            wateCount = 0;
+            saveWateState();
+            renderWateUI();
+            showToast('wate log reset for today');
+        }
+
+        // --- Gentle 45-Minute Wate Reminder Timer ---
+        function toggleReminder() {
+            reminderActive = !reminderActive;
+            try {
+                localStorage.setItem(STORAGE_KEYS.REMINDER_ON, String(reminderActive));
+            } catch (e) {}
+
+            if (reminderActive) {
+                reminderMinutesLeft = 45;
+                startReminderTimer();
+                showToast('wate reminder set for every 45m');
+            } else {
+                stopReminderTimer();
+                showToast('wate reminder paused');
+            }
+            syncReminderUI();
+        }
+
+        function startReminderTimer() {
+            if (reminderIntervalId) clearInterval(reminderIntervalId);
+            reminderMinutesLeft = 45;
+
+            reminderIntervalId = setInterval(() => {
+                reminderMinutesLeft--;
+                if (reminderMinutesLeft <= 0) {
+                    triggerWateNudge();
+                    reminderMinutesLeft = 45;
+                }
+                syncReminderUI();
+            }, 60000); // ticks every 1 minute
+        }
+
+        function stopReminderTimer() {
+            if (reminderIntervalId) {
+                clearInterval(reminderIntervalId);
+                reminderIntervalId = null;
+            }
+        }
+
+        function triggerWateNudge() {
+            showToast('pause the POs for a second — take a sip of wate');
+            const navDot = document.getElementById('nav-wate-dot');
+            navDot.classList.remove('hidden');
+        }
+
+        function syncReminderUI() {
+            const btn = document.getElementById('reminder-toggle-btn');
+            const knob = document.getElementById('reminder-knob');
+            const indicator = document.getElementById('reminder-indicator');
+            const subtext = document.getElementById('reminder-subtext');
+            const navDot = document.getElementById('nav-wate-dot');
+
+            if (reminderActive) {
+                btn.setAttribute('aria-checked', 'true');
+                btn.classList.remove('bg-[#E8E4DD]');
+                btn.classList.add('bg-[#1C1B19]');
+                knob.classList.add('translate-x-5');
+                indicator.className = "w-2 h-2 rounded-full bg-[#6A8D9B] pulse-dot";
+                subtext.textContent = `active · next wate nudge in ${reminderMinutesLeft}m`;
+                navDot.classList.remove('hidden');
+            } else {
+                btn.setAttribute('aria-checked', 'false');
+                btn.classList.add('bg-[#E8E4DD]');
+                btn.classList.remove('bg-[#1C1B19]');
+                knob.classList.remove('translate-x-5');
+                indicator.className = "w-2 h-2 rounded-full bg-[#D5D0C8]";
+                subtext.textContent = "gentle nudge every 45m while doing POs";
+                navDot.classList.add('hidden');
+            }
+        }
+
+        // --- Minimalist Toast Helper ---
+        let toastTimeout = null;
+        function showToast(message) {
+            const toast = document.getElementById('wate-toast');
+            const text = document.getElementById('wate-toast-text');
+            text.textContent = message;
+
+            toast.classList.remove('opacity-0', '-translate-y-3');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', '-translate-y-3');
+            }, 3200);
+        }
+
+        // Keyboard arrow navigation for notes
+        window.addEventListener('keydown', (e) => {
+            const drawerHidden = document.getElementById('note-drawer-backdrop').classList.contains('hidden');
+            const notesVisible = !document.getElementById('panel-notes').classList.contains('hidden');
+            if (!drawerHidden || !notesVisible) return;
+
+            if (e.key === 'ArrowRight') nextNote();
+            if (e.key === 'ArrowLeft') prevNote();
+        });
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
